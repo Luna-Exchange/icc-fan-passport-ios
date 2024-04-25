@@ -14,14 +14,14 @@ import WebKit
 // ICCWebViewLaunch.swift
 
 public class ICCWebView: UIViewController, WKNavigationDelegate {
-    private var webView: WKWebView!
+    public var webView: WKWebView!
     private var authManager: AuthManager = AuthManager()
-    private let baseUrlString = "https://icc-fan-passport-staging.vercel.app/"
+    public let baseUrlString = "https://icc-fan-passport-staging.vercel.app/"
     
-    private var authToken: String
-    private var name: String
-    private var email: String
-    private var username: String
+    public var authToken: String
+    public var name: String
+    public var email: String
+    public var username: String
     
     public init(authToken: String, name: String, email: String, username: String) {
         self.authToken = authToken
@@ -41,12 +41,12 @@ public class ICCWebView: UIViewController, WKNavigationDelegate {
         startSDKOperations()
     }
     
-    private func setupWebView() {
+    public func setupWebView() {
         webView = WKWebView(frame: view.bounds)
         webView.navigationDelegate = self
         view.addSubview(webView)
     }
-    private func startSDKOperations() {
+    public func startSDKOperations() {
         authManager.StartSDK(authToken: authToken, name: name, email: email, username: username) { encryptedToken in
             let urlString = "\(self.baseUrlString)?passport_access=\(encryptedToken)"
             if let url = URL(string: urlString) {
