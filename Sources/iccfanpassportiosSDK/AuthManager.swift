@@ -8,9 +8,9 @@
 import Foundation
 import UIKit
 
-class IccAuthManager {
+class AuthManager {
     // Function to trigger SDK operations
-    func triggerSDK(authToken: String, name: String, email: String, username: String, completion: @escaping (String) -> Void) {
+    func StartSDK(authToken: String, name: String, email: String, username: String, completion: @escaping (String) -> Void) {
         // Collect user information
         let userInfo = [
             "authToken": authToken,
