@@ -39,24 +39,7 @@ public class ICCWebView: UIViewController, WKNavigationDelegate {
         startSDKOperations()
     }
     
-    private func setupActivityIndicator() {
-        if #available(iOS 13.0, *) {
-            activityIndicator = UIActivityIndicatorView(style: .medium)
-        } else {
-            // Fallback on earlier versions
-        }
-            activityIndicator.center = view.center
-            activityIndicator.color = .blue
-            view.addSubview(activityIndicator)
-        }
-
-    private func showActivityIndicator() {
-            activityIndicator.startAnimating()
-        }
-
-    private func hideActivityIndicator() {
-            activityIndicator.stopAnimating()
-        }
+   
     
     public func setupWebView() {
         webView = WKWebView(frame: view.bounds)
@@ -81,7 +64,6 @@ public class ICCWebView: UIViewController, WKNavigationDelegate {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        showActivityIndicator()
         
         // Prepare the request body
         let requestBody: [String: String] = [
@@ -102,10 +84,8 @@ public class ICCWebView: UIViewController, WKNavigationDelegate {
                let encryptedToken = json["token"] {
                 // Call completion handler with encrypted token
                 completion(encryptedToken)
-                self.hideActivityIndicator()
             } else {
                 print("Error: Unable to parse response")
-                self.hideActivityIndicator()
             }
         }
         task.resume()
