@@ -62,20 +62,21 @@ struct ContentView: View {
 3. Instantiate and Display the WebViewController: Instantiate the WebViewController and present or push it from your existing view controller.
 
 ```
-import UIKit
-
 class MyViewController: UIViewController {
 
     @IBAction func showWebView(_ sender: UIButton) {
-        // Instantiate WebViewController
-        let webViewController = WebViewController()
+        // Instantiate ICCWebViewLaunch
+        let authToken = "yourAuthToken"
+        let name = "John Doe"
+        let email = "john@example.com"
+        let username = "johndoe"
         
-        // Present or push the WebViewController
-        // Example: Present modally
-        present(webViewController, animated: true, completion: nil)
+        let webViewLaunch = ICCWebViewLaunch(authToken: authToken, name: name, email: email, username: username)
         
-        // Example: Push onto navigation stack
-        // navigationController?.pushViewController(webViewController, animated: true)
+        // Present or push the ICCWebViewLaunch
+        present(webViewLaunch, animated: true, completion: nil)
+        // Or
+        // navigationController?.pushViewController(webViewLaunch, animated: true)
     }
 }
 ```
