@@ -1,14 +1,13 @@
 # iccfanpassportiosSDK Documentation
 
-ICCWebViewLauncher is a Swift package that provides a simple way to launch a web view in SwiftUI/UIKit applications.
+iccfanpassportiosSDK is a Swift package that provides a simple way to launch a web view in SwiftUI/UIKit applications.
 
 ## Overview
 
-ICCWebViewLauncher allows you to easily integrate a web view into your SwiftUI/UIKit views, enabling you to display web content within your application.
+iccfanpassportiosSDK allows you to easily integrate a web view into your SwiftUI/UIKit views, enabling you to display web content within your application.
 
 ## Features
 
-- Launch a web view with a specified URL(https://starter.mintbase.xyz/) for now.
 - Customize back and forward navigation gestures and link preview.
 - Handle errors during web view navigation.
 - Provide accessibility labels for improved accessibility.
@@ -17,42 +16,15 @@ ICCWebViewLauncher allows you to easily integrate a web view into your SwiftUI/U
 
 ### Swift Package Manager
 
-To integrate MyWebViewLauncher into your Xcode project using Swift Package Manager, follow these steps:
+To integrate iccfanpassportiosSDK into your Xcode project using Swift Package Manager, follow these steps:
 
 1. In Xcode, select your project in the Project Navigator.
 2. Go to the "Swift Packages" tab.
 3. Click the "+" button and select "Add Package Dependency".
-4. Enter the URL of the ICCWebViewLauncher repository: `(https://github.com/Luna-Exchange/icc-fan-passport-ios.git)`
+4. Enter the URL of the iccfanpassportiosSDK repository: `(https://github.com/Luna-Exchange/icc-fan-passport-ios.git)`
 5. Click "Next", then select the version or branch you want to use.
 6. Click "Next" and then "Finish" to add the package to your project.
 
-### Manual Installation
-
-If you prefer not to use Swift Package Manager, you can manually add the MyWebViewLauncher files to your project:
-
-1. Clone or download the ICCWebViewLauncher repository from [GitHub](https://github.com/Luna-Exchange/icc-fan-passport-ios.git).
-2. Copy the `iccfanpassportiosSDK.swift` file into your Xcode project.
-3. Make sure to add the necessary imports for `UIKit` and `WebKit` in any files where you use the `WebViewController`.
-
-
-## Usage
-
-#To use ICCWebViewLauncher in your SwiftUI view, follow these steps:
-
-1. Import the ICCWebViewLauncher module.
-2. Call the `launchWebView()` method with the desired URL.
-
-```swift
-For SwiftUI
-
-import SwiftUI
-import iccfanpassSDKSwiftUI
-
-struct ContentView: View {
-    var body: some View {
-        MyWebViewLauncher.launchWebView(url: URL)
-    }
-}
 ```
 
 # To integrate the WebViewController into a UIKit app, you can follow these steps:
@@ -71,7 +43,7 @@ class MyViewController: UIViewController {
         let email = "john@example.com"
         let username = "johndoe"
         
-        let webViewLaunch = ICCWebViewLaunch(authToken: authToken, name: name, email: email, username: username)
+        let webViewLaunch = ICCWebView(authToken: authToken, name: name, email: email, username: username)
         
         // Present or push the ICCWebViewLaunch
         present(webViewLaunch, animated: true, completion: nil)
