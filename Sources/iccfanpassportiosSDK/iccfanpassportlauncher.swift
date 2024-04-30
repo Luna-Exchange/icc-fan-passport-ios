@@ -20,7 +20,7 @@ public class ICCWebView: UIViewController, WKNavigationDelegate {
     public var name: String
     public var email: String
     
-    public init(authToken: String, name: String, email: String, username: String) {
+    public init(authToken: String, name: String, email: String) {
         self.authToken = authToken
         self.name = name
         self.email = email
