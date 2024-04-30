@@ -41,14 +41,12 @@ class MyViewController: UIViewController {
         let authToken = "yourAuthToken"
         let name = "John Doe"
         let email = "john@example.com"
-        let username = "johndoe"
         
         let webViewLaunch = ICCWebView(authToken: authToken, name: name, email: email, username: username)
         
         // Present or push the ICCWebViewLaunch
         present(webViewLaunch, animated: true, completion: nil)
-        // Or
-        // navigationController?.pushViewController(webViewLaunch, animated: true)
+        /
     }
 }
 ```
