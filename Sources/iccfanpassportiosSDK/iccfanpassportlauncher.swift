@@ -19,13 +19,11 @@ public class ICCWebView: UIViewController, WKNavigationDelegate {
     public var authToken: String
     public var name: String
     public var email: String
-    public var username: String
     
     public init(authToken: String, name: String, email: String, username: String) {
         self.authToken = authToken
         self.name = name
         self.email = email
-        self.username = username
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -46,14 +44,16 @@ public class ICCWebView: UIViewController, WKNavigationDelegate {
         webView.navigationDelegate = self
         view.addSubview(webView)
     }
-    
+    //Updated to run on the main thread
     public func startSDKOperations() {
         encryptAuthToken(authToken: authToken) { encryptedToken in
-            let urlString = "\(self.baseUrlString)?passport_access=\(encryptedToken)"
-            if let url = URL(string: urlString) {
-                self.webView.load(URLRequest(url: url))
-            } else {
-                print("Error: Invalid URL")
+            DispatchQueue.main.async {
+                let urlString = "\(self.baseUrlString)?passport_access=\(encryptedToken)"
+                if let url = URL(string: urlString) {
+                    self.webView.load(URLRequest(url: url))
+                } else {
+                    print("Error: Invalid URL")
+                }
             }
         }
     }
@@ -69,8 +69,7 @@ public class ICCWebView: UIViewController, WKNavigationDelegate {
         let requestBody: [String: String] = [
             "authToken": authToken,
             "name": name,
-            "email": email,
-            "username": username
+            "email": email
         ]
         let jsonData = try! JSONSerialization.data(withJSONObject: requestBody)
         request.httpBody = jsonData
