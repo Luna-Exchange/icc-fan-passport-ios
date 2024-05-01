@@ -60,7 +60,7 @@ public class ICCWebView: UIViewController, WKNavigationDelegate {
 
     private func encryptAuthToken(authToken: String, completion: @escaping (String) -> Void) {
         // Prepare the request
-        let url = URL(string: "https://icc-fan-passport-stg-api.insomnialabs.xyz/api/#/auth/AuthController_encode")!
+        let url = URL(string: "https://icc-fan-passport-stg-api.insomnialabs.xyz/auth/encode")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -82,12 +82,14 @@ public class ICCWebView: UIViewController, WKNavigationDelegate {
             }
             
             // Parse the response
-            if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: String],
-               let encryptedToken = json["token"] {
+            if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+               let statusCode = json["statusCode"] as? Int, statusCode == 200,
+               let responseData = json["data"] as? [String: Any],
+               let encryptedToken = responseData["token"] as? String {
                 // Call completion handler with encrypted token
                 completion(encryptedToken)
             } else {
-                print("Error: Unable to parse response")
+                print("Error: Unable to parse response or token not found")
             }
         }
         task.resume()
