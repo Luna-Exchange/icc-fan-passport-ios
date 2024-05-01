@@ -60,7 +60,7 @@ public class ICCWebView: UIViewController, WKNavigationDelegate {
 
     private func encryptAuthToken(authToken: String, completion: @escaping (String) -> Void) {
         // Prepare the request
-        let url = URL(string: "https://icc-fan-passport-stg-api.insomnialabs.xyz/auth/encode")!
+        let url = URL(string: "https://icc-fan-passport-stg-api.insomnialabs.xyz/api/#/auth/AuthController_encode/auth/encode")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
