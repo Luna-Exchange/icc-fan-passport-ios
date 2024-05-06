@@ -15,15 +15,26 @@ public class ICCWebView: UIViewController, WKNavigationDelegate {
     public var webView: WKWebView!
     private var baseUrlString = "https://icc-fan-passport-staging.vercel.app/"
     private var activityIndicator: UIActivityIndicatorView!
+    private var loaderViewController: LoaderViewController?
     
     public var authToken: String
     public var name: String
     public var email: String
+    public var initialEntryPoint: PassportEntryPoint
+    public var navigateToICCAction: (() -> Void)? // Callback closure
     
-    public init(authToken: String, name: String, email: String) {
+//    public init(authToken: String, name: String, email: String) {
+//        self.authToken = authToken
+//        self.name = name
+//        self.email = email
+//        super.init(nibName: nil, bundle: nil)
+//    }
+//    
+    public init(authToken: String, name: String, email: String, initialEntryPoint: PassportEntryPoint) {
         self.authToken = authToken
         self.name = name
         self.email = email
+        self.initialEntryPoint = initialEntryPoint
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -34,7 +45,7 @@ public class ICCWebView: UIViewController, WKNavigationDelegate {
     public override func viewDidLoad() {
         super.viewDidLoad()
         setupWebView()
-        startSDKOperations()
+        startSDKOperations(entryPoint: initialEntryPoint) // Default entry point is home
     }
     
    
@@ -45,18 +56,20 @@ public class ICCWebView: UIViewController, WKNavigationDelegate {
         view.addSubview(webView)
     }
     //Updated to run on the main thread
-    public func startSDKOperations() {
-        encryptAuthToken(authToken: authToken) { encryptedToken in
-            DispatchQueue.main.async {
-                let urlString = "\(self.baseUrlString)?passport_access=\(encryptedToken)"
-                if let url = URL(string: urlString) {
-                    self.webView.load(URLRequest(url: url))
-                } else {
-                    print("Error: Invalid URL")
+    public func startSDKOperations(entryPoint: PassportEntryPoint) {
+            showLoader() // Show loader before network call
+            
+            encryptAuthToken(authToken: authToken) { encryptedToken in
+                DispatchQueue.main.async {
+                    if let url = self.constructURL(forEntryPoint: entryPoint, withToken: encryptedToken) {
+                        self.webView.load(URLRequest(url: url))
+                    } else {
+                        print("Error: Invalid URL")
+                        self.hideLoader() // Hide loader on error
+                    }
                 }
             }
         }
-    }
 
     private func encryptAuthToken(authToken: String, completion: @escaping (String) -> Void) {
         // Prepare the request
@@ -94,6 +107,48 @@ public class ICCWebView: UIViewController, WKNavigationDelegate {
         }
         task.resume()
     }
+    
+    private func constructURL(forEntryPoint entryPoint: PassportEntryPoint, withToken token: String) -> URL? {
+            let path: String
+            switch entryPoint {
+                case .onboarding:
+                    path = "onboarding"
+                case .profile:
+                    path = "profile"
+                case .createavatar:
+                    path = "create-avatar"
+                case .challenge:
+                    path = "challenges"
+                case .rewards:
+                    path = "rewards"
+                // Add more cases for additional entry points as needed
+            }
+            
+            let urlString = "\(baseUrlString)?page=\(path)&passport_access=\(token)"
+            return URL(string: urlString)
+        }
+        
+        private func showLoader() {
+            loaderViewController = LoaderViewController()
+            present(loaderViewController!, animated: true, completion: nil)
+        }
+        
+        private func hideLoader() {
+            loaderViewController?.dismiss(animated: true, completion: nil)
+        }
+    
+    
+    // Function to handle web view navigation events
+        public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            // Check if the loaded webpage contains the desired event
+            webView.evaluateJavaScript("document.body.innerHTML") { [weak self] result, error in
+                guard let html = result as? String, html.contains("navigate-to-icc") else {
+                    return
+                }
+                // Call the callback closure if it's set
+                self?.navigateToICCAction?()
+            }
+        }
     
     // WKNavigationDelegate methods...
 }
