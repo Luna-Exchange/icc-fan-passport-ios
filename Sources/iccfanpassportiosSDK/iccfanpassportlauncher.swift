@@ -124,7 +124,7 @@ public class ICCWebView: UIViewController, WKNavigationDelegate {
                 // Add more cases for additional entry points as needed
             }
             
-            let urlString = "\(baseUrlString)?page=\(path)&passport_access=\(token)"
+            let urlString = "(baseUrlString)?page=\(path)&passport_access=\(token)"
             return URL(string: urlString)
         }
         
