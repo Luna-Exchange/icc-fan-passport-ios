@@ -1,6 +1,6 @@
 //
 //  File.swift
-//  
+//
 //
 //  Created by Computer on 4/25/24.
 //
@@ -11,7 +11,10 @@ import Foundation
 import UIKit
 import WebKit
 
-public class ICCWebView: UIViewController, WKNavigationDelegate {
+import UIKit
+import WebKit
+
+public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessageHandler {
     public var webView: WKWebView!
     private var baseUrlString = "https://icc-fan-passport-staging.vercel.app/"
     private var activityIndicator: UIActivityIndicatorView!
@@ -23,13 +26,6 @@ public class ICCWebView: UIViewController, WKNavigationDelegate {
     public var initialEntryPoint: PassportEntryPoint
     public var navigateToICCAction: (() -> Void)? // Callback closure
     
-//    public init(authToken: String, name: String, email: String) {
-//        self.authToken = authToken
-//        self.name = name
-//        self.email = email
-//        super.init(nibName: nil, bundle: nil)
-//    }
-//    
     public init(authToken: String, name: String, email: String, initialEntryPoint: PassportEntryPoint) {
         self.authToken = authToken
         self.name = name
@@ -48,28 +44,53 @@ public class ICCWebView: UIViewController, WKNavigationDelegate {
         startSDKOperations(entryPoint: initialEntryPoint) // Default entry point is home
     }
     
-   
-    
     public func setupWebView() {
         webView = WKWebView(frame: view.bounds)
         webView.navigationDelegate = self
         view.addSubview(webView)
+        
+        // Enable JavaScript
+        webView.configuration.preferences.javaScriptEnabled = true
+        
+        
+        // Add script message handler for 'navigateToIcc'
+        
+        webView.configuration.userContentController.add(self, name: "navigateToIcc")
     }
-    //Updated to run on the main thread
+    
+    public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        // Inject JavaScript to handle 'navigate-to-icc' event
+        let script = """
+            window.addEventListener('navigate-to-icc', function() {
+                window.webkit.messageHandlers.navigateToIcc.postMessage(null);
+            });
+        """
+        webView.evaluateJavaScript(script, completionHandler: nil)
+    }
+    
+    public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        if message.name == "navigateToIcc" {
+            // Handle the 'navigate-to-icc' event here
+            print("Received 'navigate-to-icc' event")
+            // Call the callback action
+            navigateToICCAction?()
+        }
+    }
+    
     public func startSDKOperations(entryPoint: PassportEntryPoint) {
-            showLoader() // Show loader before network call
-            
-            encryptAuthToken(authToken: authToken) { encryptedToken in
-                DispatchQueue.main.async {
-                    if let url = self.constructURL(forEntryPoint: entryPoint, withToken: encryptedToken) {
-                        self.webView.load(URLRequest(url: url))
-                    } else {
-                        print("Error: Invalid URL")
-                        self.hideLoader() // Hide loader on error
-                    }
+        showLoader() // Show loader before network call
+        
+        encryptAuthToken(authToken: authToken) { encryptedToken in
+            DispatchQueue.main.async {
+                if let url = self.constructURL(forEntryPoint: entryPoint, withToken: encryptedToken) {
+                    self.webView.load(URLRequest(url: url))
+                } else {
+                    print("Error: Invalid URL")
+                    self.hideLoader() // Hide loader on error
                 }
             }
         }
+    }
 
     private func encryptAuthToken(authToken: String, completion: @escaping (String) -> Void) {
         // Prepare the request
@@ -109,48 +130,46 @@ public class ICCWebView: UIViewController, WKNavigationDelegate {
     }
     
     private func constructURL(forEntryPoint entryPoint: PassportEntryPoint, withToken token: String) -> URL? {
-            let path: String
-            switch entryPoint {
-                case .onboarding:
-                    path = "onboarding"
-                case .profile:
-                    path = "profile"
-                case .createavatar:
-                    path = "create-avatar"
-                case .challenge:
-                    path = "challenges"
-                case .rewards:
-                    path = "rewards"
-                // Add more cases for additional entry points as needed
-            }
-            
-            let urlString = "\(baseUrlString)?page=\(path)&passport_access=\(token)"
-            return URL(string: urlString)
+        let path: String
+        switch entryPoint {
+            case .onboarding:
+                path = "onboarding"
+            case .profile:
+                path = "profile"
+            case .createavatar:
+                path = "create-avatar"
+            case .challenge:
+                path = "challenges"
+            case .rewards:
+                path = "rewards"
+            // Add more cases for additional entry points as needed
         }
         
-        private func showLoader() {
-            loaderViewController = LoaderViewController()
-            present(loaderViewController!, animated: true, completion: nil)
-        }
-        
-        private func hideLoader() {
-            loaderViewController?.dismiss(animated: true, completion: nil)
-        }
+        let urlString = "\(baseUrlString)\(path)?passport_access=\(token)"
+        return URL(string: urlString)
+    }
     
+    private func showLoader() {
+        loaderViewController = LoaderViewController()
+        present(loaderViewController!, animated: true, completion: nil)
+    }
     
-    // Function to handle web view navigation events
-        public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            // Check if the loaded webpage contains the desired event
-            webView.evaluateJavaScript("document.body.innerHTML") { [weak self] result, error in
-                guard let html = result as? String, html.contains("navigate-to-icc") else {
-                    return
-                }
-                // Call the callback closure if it's set
-                self?.navigateToICCAction?()
-            }
-        }
+    private func hideLoader() {
+        loaderViewController?.dismiss(animated: true, completion: nil)
+    }
     
-    // WKNavigationDelegate methods...
+    // Add message handler to WKWebView configuration
+//       public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+//           if message.name == "navigateToICC" {
+//               navigateToICCAction?()
+//           }
 }
 
+   
+    
+    
+       
+
+
+    // WKNavigationDelegate methods...
 
