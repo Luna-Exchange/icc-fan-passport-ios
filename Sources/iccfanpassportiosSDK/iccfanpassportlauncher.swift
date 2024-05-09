@@ -1,6 +1,6 @@
 //
 //  File.swift
-//
+//  
 //
 //  Created by Computer on 4/25/24.
 //
@@ -54,7 +54,6 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
         
         
         // Add script message handler for 'navigateToIcc'
-        
         webView.configuration.userContentController.add(self, name: "navigateToIcc")
     }
     
