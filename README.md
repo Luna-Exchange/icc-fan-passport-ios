@@ -1,5 +1,5 @@
 # iccfanpassportiosSDK Documentation
-## iccfanpassportiosSDK 1.0.3
+## iccfanpassportiosSDK 1.0.4
 
 iccfanpassportiosSDK is a Swift package that provides a simple way to launch a web view in SwiftUI/UIKit applications.
 
