@@ -1,10 +1,3 @@
-//
-//  File.swift
-//  
-//
-//  Created by Computer on 5/6/24.
-//
-
 import Foundation
 
 public enum PassportEntryPoint {
@@ -13,6 +6,4 @@ public enum PassportEntryPoint {
     case createavatar
     case rewards
     case challenge
-    
-    // Add more entry points as needed
 }

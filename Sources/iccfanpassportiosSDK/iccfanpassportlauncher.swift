@@ -1,6 +1,6 @@
 //
 //  File.swift
-//  
+//
 //
 //  Created by Computer on 4/25/24.
 //
@@ -10,23 +10,23 @@
 import Foundation
 import UIKit
 import WebKit
+import SafariServices
 
-import UIKit
-import WebKit
-
-public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessageHandler {
+public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessageHandler,SFSafariViewControllerDelegate {
     public var webView: WKWebView!
-    private var baseUrlString = "https://icc-fan-passport-staging.vercel.app/"
+    private var baseUrlString = "https://passport.icc-cricket.com/"
     private var activityIndicator: UIActivityIndicatorView!
-    private var loaderViewController: LoaderViewController?
+    //private var loaderViewController: LoaderViewController?
     
     public var authToken: String
     public var name: String
     public var email: String
+    public var publickey: String?
+    public var accountid: String?
     public var initialEntryPoint: PassportEntryPoint
-    public var navigateToICCAction: (() -> Void)? // Callback closure
+    public var navigateToICCAction: ((UIViewController) -> Void)?
     
-    public init(authToken: String, name: String, email: String, initialEntryPoint: PassportEntryPoint) {
+    public init(authToken: String, name: String, email: String,publickey: String?,accountid: String?, initialEntryPoint: PassportEntryPoint) {
         self.authToken = authToken
         self.name = name
         self.email = email
@@ -40,8 +40,14 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
     
     public override func viewDidLoad() {
         super.viewDidLoad()
+        //setupWebView()
+        //startSDKOperations(entryPoint: initialEntryPoint) // Default entry point is home
+    }
+    
+    public override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
         setupWebView()
-        startSDKOperations(entryPoint: initialEntryPoint) // Default entry point is home
+        startSDKOperations(entryPoint: initialEntryPoint)
     }
     
     public func setupWebView() {
@@ -72,28 +78,36 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
             // Handle the 'navigate-to-icc' event here
             print("Received 'navigate-to-icc' event")
             // Call the callback action
-            navigateToICCAction?()
+            navigateToICCAction?(<#UIViewController#>)
         }
     }
     
     public func startSDKOperations(entryPoint: PassportEntryPoint) {
-        showLoader() // Show loader before network call
-        
         encryptAuthToken(authToken: authToken) { encryptedToken in
             DispatchQueue.main.async {
-                if let url = self.constructURL(forEntryPoint: entryPoint, withToken: encryptedToken) {
+                var urlString: String
+                
+                if let accountId = self.accountid, let publickey = self.publickey, !accountId.isEmpty {
+                    // If account id is not empty, construct URL with connect-wallet path
+                    urlString = "\(self.baseUrlString)\(entryPoint)/connect-wallet?passport_access=\(encryptedToken)&account_id=\(accountId)&public_key=\(publickey)"
+                } else {
+                    // If account id is empty, construct URL with the specified path
+                    urlString = "\(self.baseUrlString)\(entryPoint)?passport_access=\(encryptedToken)"
+                }
+                
+                if let url = URL(string: urlString) {
                     self.webView.load(URLRequest(url: url))
                 } else {
                     print("Error: Invalid URL")
-                    self.hideLoader() // Hide loader on error
                 }
             }
         }
     }
-
+    
+    
     private func encryptAuthToken(authToken: String, completion: @escaping (String) -> Void) {
         // Prepare the request
-        let url = URL(string: "https://icc-fan-passport-stg-api.insomnialabs.xyz/auth/encode")!
+        let url = URL(string: "https://passport-api.icc-cricket.com/auth/encode")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -129,46 +143,94 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
     }
     
     private func constructURL(forEntryPoint entryPoint: PassportEntryPoint, withToken token: String) -> URL? {
-        let path: String
+        var path: String
+        
         switch entryPoint {
-            case .onboarding:
-                path = "onboarding"
-            case .profile:
-                path = "profile"
-            case .createavatar:
-                path = "create-avatar"
-            case .challenge:
-                path = "challenges"
-            case .rewards:
-                path = "rewards"
+        case .onboarding:
+            path = "onboarding"
+        case .profile:
+            path = "profile"
+        case .createavatar:
+            path = "create-avatar"
+        case .challenge:
+            path = "challenges"
+        case .rewards:
+            path = "rewards"
             // Add more cases for additional entry points as needed
         }
         
         let urlString = "\(baseUrlString)\(path)?passport_access=\(token)"
+        
         return URL(string: urlString)
     }
     
-    private func showLoader() {
-        loaderViewController = LoaderViewController()
-        present(loaderViewController!, animated: true, completion: nil)
+    
+    
+    public func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        guard let url = navigationAction.request.url else {
+            decisionHandler(.cancel)
+            return
+        }
+        
+        // Determine if the URL should be opened in Safari
+        if shouldOpenURLInSafari(url) {
+            
+            let urlmint = "https://mintbase-wallet-git-icc-theme-mintbase.vercel.app/?theme=icc?success_url=icc://mintbase.xyz"
+            guard let safariURL = URL(string: urlmint) else {
+                decisionHandler(.cancel)
+                return
+            }
+            
+            // Dismiss any presented view controllers, such as the Safari view controller
+            if let presentingVC = self.presentingViewController {
+                presentingVC.dismiss(animated: true, completion: {
+                    UIApplication.shared.open(safariURL)
+                })
+            } else {
+                UIApplication.shared.open(safariURL)
+            }
+            
+            decisionHandler(.cancel)
+            
+        } else {
+            // Continue loading the URL in the WKWebView
+            decisionHandler(.allow)
+        }
     }
-    
-    private func hideLoader() {
-        loaderViewController?.dismiss(animated: true, completion: nil)
-    }
-    
-    // Add message handler to WKWebView configuration
-//       public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-//           if message.name == "navigateToICC" {
-//               navigateToICCAction?()
-//           }
-}
-
-   
-    
-    
-       
 
 
+
+        func shouldOpenURLInSafari(_ url: URL) -> Bool {
+            // Check if the URL's host contains "wallet.mintbase.xyz"
+            //return url.host?.contains("wallet.mintbase.xyz") ?? false
+            return url.host?.contains("mintbase-wallet-git-icc-theme-mintbase.vercel.app") ?? false
+        }
+    
+    // SFSafariViewControllerDelegate method to intercept URLs
+    public func safariViewController(_ controller: SFSafariViewController, initialLoadDidRedirectTo URL: URL) {
+            // Check if the URL is a deep link that should be handled by your app
+            if URL.scheme == "my-deep-link" {
+                // Handle the deep link here
+                handleDeepLink(URL)
+                // Dismiss the SFSafariViewController
+                controller.dismiss(animated: true, completion: nil)
+            }
+        }
+    
+        func handleDeepLink(_ url: URL) {
+                // Handle the deep link according to your app's logic
+                // For example, navigate to a specific screen or perform an action
+                    //print("Deep things")
+            }
+        
+    
+    
+    
+    
+    
+    
+    
+    
     // WKNavigationDelegate methods...
-
+    
+}
