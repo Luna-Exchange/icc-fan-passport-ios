@@ -1,5 +1,5 @@
 # iccfanpassportiosSDK Documentation
-## iccfanpassportiosSDK 1.0.6
+## iccfanpassportiosSDK 1.0.7
 
 ### Overview
 
@@ -27,9 +27,8 @@ let iccWebView = ICCWebView(
     authToken: "yourAuthToken",
     name: "userName",
     email: "userEmail",
-    publickey: "userPublicKey",
-    accountid: "userAccountID",
     initialEntryPoint: .onboarding
+    Environment = Environment.production
 )
 ```
 
@@ -38,9 +37,8 @@ let iccWebView = ICCWebView(
 - `authToken`: The authentication token for the user.
 - `name`: The name of the user.
 - `email`: The email of the user.
-- `publickey`: The public key of the user (optional).
-- `accountid`: The account ID of the user (optional).
 - `initialEntryPoint`: The initial entry point for the passport (`.onboarding`, `.profile`, `.createavatar`, `.challenge`, `.rewards`).
+- `initialEntryPoint`: The initial environment for the passport (`.prodution`, `.developement`).
 
 ### Usage
 
@@ -55,22 +53,23 @@ class YourViewController: UIViewController {
         
         let iccWebView = ICCWebView(
             authToken: "yourAuthToken",
-            name: "userName",
-            email: "userEmail",
-            publickey: "userPublicKey",
-            accountid: "userAccountID",
-            initialEntryPoint: .onboarding
-        )
+              let name = "name"
+        let email = "email address"
+        let initialEntryPoint = PassportEntryPoint.challenges // Replace with actual entry point
+        let environment = Environment.production // or .development
         
-        // Set up navigation action
-        iccWebView.navigateToICCAction = { [weak self] viewController in
-            self?.navigationController?.pushViewController(viewController, animated: true)
+        let iccFanView = ICCFan(authToken: authToken, name: name, email: email, initialEntryPoint: initialEntryPoint, environment: environment)
+        
+        
+        iccFanView.navigateToICCAction = { viewController in
+            
+            let detailViewController = AnotherVC()
+                     
+            viewController.dismiss(animated: true) {
+                self.present(detailViewController, animated: true, completion: nil)
+            }
         }
         
-        // Add ICCWebView as a child view controller
-        addChild(iccWebView)
-        view.addSubview(iccWebView.view)
-        iccWebView.didMove(toParent: self)
     }
 }
 ```
@@ -79,10 +78,16 @@ class YourViewController: UIViewController {
 
 ICCWebView can handle deep links that navigate back to your app. When the deep link happens after wallet creation, it comes with parameters called public_key and accountid, such as:
 
-perl
-Copy code
-icc://mintbase.xyz?account_id=korva-nhgor.near&public_key=ed25519%3A2n8HRsRNaaNm5RguWupo72shEwdqge67ESCpgyedTMhR
-Note that icc is the schema in the SDK. You will need to handle storing the public key and account ID in your app delegate and navigate to the preferred view controller.
+So add this to your appdelegate:
+            iccfanSDK.handle(url: URL)
+            
+            ##Example
+                func application(_ app: UIApplication, open url: URL,options: [UIApplication.OpenURLOptionsKey : Any] = [:]
+                ) -> Bool {
+            
+                    return iccfanSDK.handle(url: url)
+                }
+
 
 ## Customizing Web Content
 
@@ -92,40 +97,7 @@ To start operations with a specific entry point, use the `startSDKOperations` me
 iccWebView.startSDKOperations(entryPoint: .profile)
 ```
 
-### Example
 
-Here’s a complete example of using `ICCWebView` in a view controller:
-
-```swift
-import UIKit
-
-class YourViewController: UIViewController {
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        
-        let iccWebView = ICCWebView(
-            authToken: "yourAuthToken",
-            name: "userName",
-            email: "userEmail",
-            publickey: "userPublicKey",
-            accountid: "userAccountID",
-            initialEntryPoint: .onboarding
-        )
-        
-        iccWebView.navigateToICCAction = { [weak self] viewController in
-            self?.navigationController?.pushViewController(viewController, animated: true)
-        }
-        
-        addChild(iccWebView)
-        view.addSubview(iccWebView.view)
-        iccWebView.didMove(toParent: self)
-    }
-    
-    func handleDeepLink(_ url: URL) {
-        print("Received deep link: \(url)")
-    }
-}
-```
 
 ### Notes
 
