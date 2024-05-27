@@ -11,21 +11,29 @@ import WebKit
 import SafariServices
 
 public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessageHandler, SFSafariViewControllerDelegate {
-    
+    struct Logger {
+        static var isEnabled: Bool { iccfanSDK.enableLogging }
+        static func print(_ string: CustomStringConvertible) {
+            if isEnabled {
+                Swift.print(string)
+            }
+        }
+    }
     private var urlList: [String] = []
     private var currentIndex: Int = 0
     
     public var webView: WKWebView!
     private var baseUrlString: String
     private var UrlStringMint: String
+    private var UrlStringMinting: String
     private var UrlStringEncode: String
     private var deepLinkURLFantasy: String
     private var activityIndicator: UIActivityIndicatorView!
     private var backgroundImageView: UIImageView!
     
-    public var authToken: String?
-    public var name: String?
-    public var email: String?
+    public var authToken: String? { iccfanSDK.userData?.token }
+    public var name: String? { iccfanSDK.userData?.name }
+    public var email: String? { iccfanSDK.userData?.email }
     public var initialEntryPoint: PassportEntryPoint
    
     public typealias NavigateToICCAction = (UIViewController) -> Void  // Define callback type for navigation
@@ -35,24 +43,26 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
     public var signInWithIccCompletion: SignInWithIccCompletion?  // Property to store sign-in callback
 
 
-    public init(authToken: String, name: String, email: String, initialEntryPoint: PassportEntryPoint, environment: Environment) {
-        self.authToken = authToken
-        self.name = name
-        self.email = email
+    public init(initialEntryPoint: PassportEntryPoint, environment: Environment) {
         self.initialEntryPoint = initialEntryPoint
         switch environment {
         case .development:
             self.baseUrlString = "https://icc-fan-passport-staging.vercel.app/"
             self.UrlStringMint = "https://testnet.wallet.mintbase.xyz/connect?theme=icc&success_url=iccdev://mintbase.xyz"
+            self.UrlStringMinting = "https://testnet.wallet.mintbase.xyz/sign-transaction?theme=icc&transactions_data=${encodedTransaction}&callback_url=iccdev://mintbase.xyz"
             self.UrlStringEncode = "https://icc-fan-passport-stg-api.insomnialabs.xyz/auth/encode"
             self.deepLinkURLFantasy = "iccdev://react-fe-en.icc-dev.deltatre.digital/fantasy-game"
         case .production:
             self.baseUrlString = "https://fanpassport.icc-cricket.com/"
             self.UrlStringMint = "https://wallet.mintbase.xyz/connect?theme=icc?success_url=icc://mintbase.xyz"
+            self.UrlStringMinting = "https://wallet.mintbase.xyz/sign-transaction?theme=icc&transactions_data=${encodedTransaction}&callback_url=iccdev://mintbase.xyz"
             self.UrlStringEncode = "https://passport-api.icc-cricket.com/"
             self.deepLinkURLFantasy = "icc://www.icc-cricket.com/fantasy-game"
         }
         super.init(nibName: nil, bundle: nil)
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(tokenRefreshed), name: TokenManager.tokenRefreshedNotification, object: nil)
+
     }
 
     required init?(coder: NSCoder) {
@@ -70,26 +80,41 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
         setupWebView()
         setupBackgroundImageView()
         setupActivityIndicator()
-        if let authToken = self.authToken, !authToken.isEmpty {
+//        if let authToken = self.authToken, !authToken.isEmpty {
+//            startSDKOperations(entryPoint: initialEntryPoint)
+//        } else {
+//            loadURL(baseUrlString)
+//        }
+        if let authToken = TokenManager.shared.getAccessToken(), !authToken.isEmpty {
             startSDKOperations(entryPoint: initialEntryPoint)
         } else {
             loadURL(baseUrlString)
         }
-        //startSDKOperations(entryPoint: initialEntryPoint)
     }
-
-    public func setupWebView() {
+    
+    func update(userData: UserData?) {
+        startSDKOperations(entryPoint: self.initialEntryPoint)
+    }
+    
+    @objc private func tokenRefreshed() {
+            Logger.print("Token refreshed")
+            if let authToken = TokenManager.shared.getAccessToken(), !authToken.isEmpty {
+                startSDKOperations(entryPoint: initialEntryPoint)
+            } else {
+                loadURL(baseUrlString)
+            }
+        }
+    
+    func setupWebView() {
         webView = WKWebView()
         webView.navigationDelegate = self
         webView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(webView)
-        
-        // Enable JavaScript
-        webView.configuration.preferences.javaScriptEnabled = true
-        
+                
         // Add script message handler for 'navigateToIcc'
         webView.configuration.userContentController.add(self, name: "navigateToIcc")
-        
+        webView.configuration.userContentController.add(self, name: "goToFantasy")
+        webView.configuration.userContentController.add(self, name: "dddd")
         // Set up Auto Layout constraints to make the webView full screen
         NSLayoutConstraint.activate([
             webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -99,7 +124,7 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
         ])
     }
 
-    public func setupBackgroundImageView() {
+    func setupBackgroundImageView() {
         // Initialize the background image view
         backgroundImageView = UIImageView(image: UIImage(named: "loadingpage.png"))
         backgroundImageView.contentMode = .scaleAspectFill
@@ -115,12 +140,8 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
         ])
     }
 
-    public func setupActivityIndicator() {
-        if #available(iOS 13.0, *) {
-            activityIndicator = UIActivityIndicatorView(style: .large)
-        } else {
-            // Fallback on earlier versions
-        }
+    func setupActivityIndicator() {
+        activityIndicator = UIActivityIndicatorView(style: .large)
         activityIndicator.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(activityIndicator)
         
@@ -168,56 +189,52 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
     public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         switch message.name {
         case "navigateToIcc":
-            print("Received 'navigate-to-icc' event")
+            Logger.print("Received 'navigate-to-icc' event")
             navigateToICCAction?(self)
         case "goToFantasy":
-            print("Received 'go-to-fantasy' event")
+            Logger.print("Received 'go-to-fantasy' event")
             // Call your callback action for event-name-1 here
             openDeepLink(urlString: deepLinkURLFantasy)
-            print("Fantasy")
+            Logger.print("Fantasy")
         case "signInWithIcc":
-            print("Received 'sign-in-with-icc' event")
+            Logger.print("Received 'sign-in-with-icc' event")
             // Call your callback action for event-name-2 here
             signInWithIccCompletion?(true)
         default:
-            print("Received unknown event: \(message.name)")
+            Logger.print("Received unknown event: \(message.name)")
         }
     }
     
-    func openDeepLink(urlString: String) {
-      guard let url = URL(string: urlString) else {
-        print("Error: Invalid deep link URL")
-        return
-      }
-        
-
-      // Open the deep link using your preferred method (adapt as needed)
-      UIApplication.shared.open(url)
-    }
     
-    public func startSDKOperations(entryPoint: PassportEntryPoint, accountid: String? = nil, publickey: String? = nil) {
+    private func openDeepLink(urlString: String) {
+            if let url = URL(string: urlString) {
+                if UIApplication.shared.canOpenURL(url) {
+                    UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                }
+            }
+        }
+    
+    func startSDKOperations(entryPoint: PassportEntryPoint, accountid: String? = nil, publickey: String? = nil) {
         
         if let accountId = accountid, let publicKey = publickey, !accountId.isEmpty {
             let userDefaults = UserDefaults.standard
             if let tokenmintString = userDefaults.string(forKey: "tokenmint") {
                 let urlString2 = "\(self.baseUrlString)\(entryPoint)/connect-wallet?account_id=\(accountId)&public_key=\(publicKey)"
                 self.loadURL(urlString2)
-                print(urlString2)
+                Logger.print(urlString2)
                 
             } else {
                 // Handle the case where "tokenmint" is not found in UserDefaults
-                print("Missing tokenmint! Cannot construct URL.")
+                Logger.print("Missing tokenmint! Cannot construct URL.")
             }
             
             
         }else{
             encryptAuthToken(authToken: authToken!) { encryptedToken in
                 DispatchQueue.main.async {
-                    var urlString: String
-//                    
                     
                     // If account id is empty, construct URL with the specified path
-                    urlString = "\(self.baseUrlString)\(entryPoint)?passport_access=\(encryptedToken)"
+                    let urlString = "\(self.baseUrlString)\(entryPoint)?passport_access=\(encryptedToken)"
                     
                     self.loadURL(urlString)
                     
@@ -227,21 +244,20 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
             
     
     }
- 
     
-    func loadURL(_ urlString: String) {
-      if let url = URL(string: urlString) {
-        self.webView.load(URLRequest(url: url))
-      } else {
-        print("Error: Invalid URL")
-      }
+    
+   
+    
+    private func loadURL(_ urlString: String) {
+        guard let url = URL(string: urlString) else { return }
+        let request = URLRequest(url: url)
+        webView.load(request)
     }
-    
 
     private func encryptAuthToken(authToken: String, completion: @escaping (String) -> Void) {
         // Prepare the request
         guard let url = URL(string: UrlStringEncode) else {
-            print("Invalid URL string: \(UrlStringEncode)")
+            Logger.print("Invalid URL string: \(UrlStringEncode)")
             return
         }
         var request = URLRequest(url: url)
@@ -259,19 +275,19 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
             let jsonData = try JSONSerialization.data(withJSONObject: requestBody, options: [])
             request.httpBody = jsonData
         } catch {
-            print("Error serializing JSON: \(error.localizedDescription)")
+            Logger.print("Error serializing JSON: \(error.localizedDescription)")
             return
         }
         
         // Make the request
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                print("Network error: \(error.localizedDescription)")
+                Logger.print("Network error: \(error.localizedDescription)")
                 return
             }
             
             guard let data = data else {
-                print("No data received")
+                Logger.print("No data received")
                 return
             }
             
@@ -283,10 +299,10 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
                     // Call completion handler with encrypted token
                     completion(encryptedToken)
                 } else {
-                    print("Error: Unable to parse response or token not found")
+                    Logger.print("Error: Unable to parse response or token not found")
                 }
             } catch {
-                print("JSON parsing error: \(error.localizedDescription)")
+                Logger.print("JSON parsing error: \(error.localizedDescription)")
             }
         }
         task.resume()
@@ -309,28 +325,51 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
             }
             
             // Dismiss any presented view controllers, such as the Safari view controller
-            if let presentingVC = self.presentedViewController {
-                presentingVC.dismiss(animated: true, completion: {
-                    UIApplication.shared.open(safariURL)
-                })
-            } else {
-                //UIApplication.shared.open(safariURL)
-                let safari = SFSafariViewController(url: safariURL)
-                safari.delegate = self
-                self.present(safari, animated: true)
-            }
+            openSafariViewController(with: safariURL)
             
             decisionHandler(.cancel)
         } else {
             // Continue loading the URL in the WKWebView
+            guard let safariURL = URL(string: UrlStringMinting) else {
+                decisionHandler(.cancel)
+                return
+            }
+            openSafariViewController(with: safariURL)
             decisionHandler(.allow)
         }
     }
 
+    func openSafariViewController(with url: URL) {
+        // Dismiss any presented view controllers, such as the Safari view controller
+        if let presentingVC = self.presentedViewController {
+            presentingVC.dismiss(animated: true, completion: {
+                UIApplication.shared.open(url)
+            })
+        } else {
+            let safari = SFSafariViewController(url: url)
+            safari.delegate = self
+            self.present(safari, animated: true)
+        }
+    }
+
     func shouldOpenURLInSafari(_ url: URL) -> Bool {
-        // Check if the URL's host contains "wallet.mintbase.xyz"
-        //return url.host?.contains("wallet.mintbase.xyz") ?? false
-        return url.host?.contains("mintbase") ?? false
+        // Define all conditions that should lead to a Mintbase site
+        let mintbaseHosts = ["/connect"]
+        let mintbasePaths = ["/sign-transaction"]
+
+        for host in mintbasePaths {
+            if url.path.contains(host){
+                return true
+            }
+        }
+
+        for path in mintbasePaths {
+            if url.path.contains(path) {
+                return false
+            }
+        }
+        
+        return false
     }
     
     public func safariViewController(_ controller: SFSafariViewController, initialLoadDidRedirectTo URL: URL) {
@@ -338,8 +377,8 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
         if URL.scheme == "iccdev" {
             
             handleDeepLink(URL)
-            print("Safari Controller Did close")
-            print(URL)
+            Logger.print("Safari Controller Did close")
+            Logger.print(URL)
             controller.dismiss(animated: true, completion: nil)
         }
     }
@@ -373,12 +412,12 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
                   }
                 
                 // Debugging output
-                print("Account ID: \(accountId ?? "N/A")")
-                print("Public Key: \(publicKey ?? "N/A")")
+                Logger.print("Account ID: \(accountId ?? "N/A")")
+                Logger.print("Public Key: \(publicKey ?? "N/A")")
                 
                 // Inject JavaScript to handle the deeplink within the webview
                 let jsCommand = "handleDeepLink('\(url.absoluteString)')"
-                print(url.absoluteString)
+                Logger.print(url.absoluteString)
                 webView.evaluateJavaScript(jsCommand, completionHandler: nil)
                 
                 // Restart SDK operations with the extracted account_id and public_key
@@ -395,8 +434,9 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
     func encodePublicKey(_ publicKey: String) -> String {
       return publicKey.replacingOccurrences(of: "%3A", with: "")
     }
-    
+
     func presentAndHandleCallbacks(animated: Bool = true, completion: (() -> Void)? = nil) {
         self.present(self, animated: animated, completion: completion)  // Present the ICCWebView
       }
 }
+
