@@ -1,5 +1,5 @@
 # iccfanpassportiosSDK Documentation
-## iccfanpassportiosSDK 1.0.7
+## iccfanpassportiosSDK 1.0.8
 
 ### Overview
 
@@ -61,13 +61,20 @@ class YourViewController: UIViewController {
         let iccFanView = ICCFan(authToken: authToken, name: name, email: email, initialEntryPoint: initialEntryPoint, environment: environment)
         
         
-        iccFanView.navigateToICCAction = { viewController in
-            
-            let detailViewController = AnotherVC()
-                     
-            viewController.dismiss(animated: true) {
-                self.present(detailViewController, animated: true, completion: nil)
+        // Set up the completion handlers
+        iccWebView.signInWithIccCompletion = { success in
+            if success {
+                print("Sign-in with ICC was successful")
+                // Handle success, e.g., dismiss the ICCWebView or navigate to another screen
+            } else {
+                print("Sign-in with ICC failed")
+                // Handle failure
             }
+        }
+
+        iccWebView.navigateToICCAction = { viewController in
+            print("Navigate to ICC action triggered")
+            // Handle navigation to ICC action, e.g., present another view controller
         }
         
     }

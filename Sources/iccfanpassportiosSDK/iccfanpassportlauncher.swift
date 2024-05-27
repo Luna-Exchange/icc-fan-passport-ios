@@ -10,7 +10,7 @@ import UIKit
 import WebKit
 import SafariServices
 
-public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessageHandler, SFSafariViewControllerDelegate,UIWebViewDelegate {
+public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessageHandler, SFSafariViewControllerDelegate {
     
     private var urlList: [String] = []
     private var currentIndex: Int = 0
@@ -116,7 +116,11 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
     }
 
     public func setupActivityIndicator() {
-        activityIndicator = UIActivityIndicatorView(style: .large)
+        if #available(iOS 13.0, *) {
+            activityIndicator = UIActivityIndicatorView(style: .large)
+        } else {
+            // Fallback on earlier versions
+        }
         activityIndicator.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(activityIndicator)
         
@@ -181,7 +185,6 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
     }
     
     func openDeepLink(urlString: String) {
-        showPopup(title: "Fantasy", message: "I got to fantasy")
       guard let url = URL(string: urlString) else {
         print("Error: Invalid deep link URL")
         return
@@ -211,9 +214,6 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
             encryptAuthToken(authToken: authToken!) { encryptedToken in
                 DispatchQueue.main.async {
                     var urlString: String
-                    
-//                    let userDefaults = UserDefaults.standard
-//                    userDefaults.set(encryptedToken, forKey: "tokenmint")
 //                    
                     
                     // If account id is empty, construct URL with the specified path
@@ -227,23 +227,7 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
             
     
     }
-    
-    
-    func extractAccessToken(from optionalString: String?) -> String? {
-      guard let string = optionalString else { return nil }  // Handle nil case
-      
-      // Check if the string starts with "Optional(" and ends with ")"
-      if string.hasPrefix("Optional(\"") && string.hasSuffix("\")") {
-        // Remove the prefix and suffix
-        let startIndex = string.index(string.startIndex, offsetBy: 10) // Skip "Optional("
-        let endIndex = string.index(string.endIndex, offsetBy: -1)   // Skip ")"
-        let substring = String(string[startIndex..<endIndex])
-        return substring
-      } else {
-        // The string is not in the expected format
-        return nil  // Or handle this case differently (e.g., print an error)
-      }
-    }
+ 
     
     func loadURL(_ urlString: String) {
       if let url = URL(string: urlString) {
@@ -411,19 +395,6 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
     func encodePublicKey(_ publicKey: String) -> String {
       return publicKey.replacingOccurrences(of: "%3A", with: "")
     }
-    
-    func showPopup(title: String, message: String, buttons: [String] = ["OK"]) {
-       let alertController = UIAlertController(title: title, message: message, preferredStyle: .alert)
-
-       for buttonTitle in buttons {
-         let action = UIAlertAction(title: buttonTitle, style: .default) { _ in
-           // Handle button tap if needed (optional)
-         }
-         alertController.addAction(action)
-       }
-
-       self.present(alertController, animated: true, completion: nil)
-     }
     
     func presentAndHandleCallbacks(animated: Bool = true, completion: (() -> Void)? = nil) {
         self.present(self, animated: animated, completion: completion)  // Present the ICCWebView
