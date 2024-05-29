@@ -1,5 +1,5 @@
 # iccfanpassportiosSDK Documentation
-## iccfanpassportiosSDK 1.0.8
+## iccfanpassportiosSDK v1.0.9
 
 ### Overview
 
@@ -21,15 +21,11 @@ To use `ICCWebView` in your project, include the `iccfanpassportlauncher.swift` 
 To initialize `ICCWebView`, create an instance and configure it with the necessary parameters.
 
 ```swift
-import UIKit
+    initialize user data
+    iccfanSDK.userData = UserData(token: authToken, name: name, email: email)
+    Initialize SDK
+    let iccWebView = ICCWebView(initialEntryPoint: initialEntryPoint, environment: environment)
 
-let iccWebView = ICCWebView(
-    authToken: "yourAuthToken",
-    name: "userName",
-    email: "userEmail",
-    initialEntryPoint: .onboarding
-    Environment = Environment.production
-)
 ```
 
 ### Parameters
@@ -58,24 +54,33 @@ class YourViewController: UIViewController {
         let initialEntryPoint = PassportEntryPoint.challenges // Replace with actual entry point
         let environment = Environment.production // or .development
         
-        let iccFanView = ICCFan(authToken: authToken, name: name, email: email, initialEntryPoint: initialEntryPoint, environment: environment)
+    @objc func setupSDK() {
+        iccfanSDK.userData = UserData(token: authToken, name: name, email: email)
         
+        let initialEntryPoint: PassportEntryPoint = .onboarding
+        let environment: Environment = .development // or .production
         
-        // Set up the completion handlers
-        iccWebView.signInWithIccCompletion = { success in
-            if success {
-                print("Sign-in with ICC was successful")
-                // Handle success, e.g., dismiss the ICCWebView or navigate to another screen
-            } else {
-                print("Sign-in with ICC failed")
-                // Handle failure
-            }
-        }
-
+        let iccWebView = ICCWebView(initialEntryPoint: initialEntryPoint, environment: environment)
+        
         iccWebView.navigateToICCAction = { viewController in
-            print("Navigate to ICC action triggered")
-            // Handle navigation to ICC action, e.g., present another view controller
+            // Define your navigation logic here
+           
         }
+        
+        iccWebView.signInWithIccCompletion = { success in
+            // Handle the sign-in completion
+            
+        }
+        
+        iccWebView.signInWithIccCompletion = { success in
+            // Handle the sign-in completion
+        }
+        
+        
+        present(iccWebView, animated: true, completion: nil)
+    }
+
+        
         
     }
 }
@@ -108,6 +113,6 @@ iccWebView.startSDKOperations(entryPoint: .profile)
 
 ### Notes
 
-- Ensure to configure `navigateToICCAction` to handle navigation within your app.
+- Ensure to configure `navigateToICCAction`,`signInWithIccCompletion` and `SignOutToIccCompletion` to handle navigation within your app.
 
 This documentation provides a concise guide to integrating and using the `ICCWebView` SDK within your iOS app. For any advanced customizations or additional features, refer to the source code and extend the functionality as needed.
