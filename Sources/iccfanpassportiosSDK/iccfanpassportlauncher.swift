@@ -4,7 +4,7 @@ import SafariServices
 
 // swiftlint:disable all
 public class iccfanSDK {
-    public static var enableLogging: Bool = true
+    public static var enableLogging: Bool = false
     static weak var sharedFanView: ICCWebView?
     static var userData: UserData?
     public static func handle(url: URL) -> Bool {
@@ -51,7 +51,7 @@ extension URL {
 }
 
 public enum PassportEntryPoint: String {
-    case defaultPath = "/"
+    case defaultPath = ""
     case createAvatar = "/create-avatar"
     case onboarding = "/onboarding"
     case profile = "/profile"
@@ -82,6 +82,7 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
     private var currentIndex: Int = 0
     
     public var webView: WKWebView!
+    var isFirstLoad = true
     private var baseUrlString: String
     private var UrlStringMint: String
     private var UrlStringMinting: String
@@ -148,13 +149,10 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
         
         
         iccfanSDK.sharedFanView = self // Retain the reference to the shared instance
-        if let authToken, !authToken.isEmpty {
-            startSDKOperations(entryPoint: initialEntryPoint)
-        } else {
-            loadURL(baseUrlString)
-        }
+       
+        startSDKOperations(entryPoint: initialEntryPoint)
+        
     }
-
     public override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
@@ -218,11 +216,7 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
     }
 
     func setupActivityIndicator() {
-        if #available(iOS 13.0, *) {
-            activityIndicator = UIActivityIndicatorView(style: .large)
-        } else {
-            // Fallback on earlier versions
-        }
+        activityIndicator = UIActivityIndicatorView(style: .large)
         activityIndicator.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(activityIndicator)
         
@@ -235,6 +229,12 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
 
     
     public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        
+        if isFirstLoad {
+                    isFirstLoad = false
+                    // Reload webView with the second URL
+                    //loadInitialURL()
+                }
         // Inject JavaScript to handle multiple events
         let script = """
             window.addEventListener('navigate-to-icc', function() {
@@ -245,6 +245,12 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
                 });
             window.addEventListener('sign-in-with-icc', function() {
                   window.webkit.messageHandlers.signInWithIcc.postMessage(null);
+                });
+            window.addEventListener('sign-in-with-icc-also', function() {
+                  window.webkit.messageHandlers.signInWithIccAlso.postMessage(null);
+                });
+            window.addEventListener('go-to-prediction', function() {
+                window.webkit.messageHandlers.goToPrediction.postMessage(null);
                 });
             window.addEventListener('fan-passport-sign-out', function() {
                   window.webkit.messageHandlers.signOut.postMessage(null);
@@ -287,12 +293,16 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
             Logger.print("Received 'sign-in-with-icc' event")
             // Call your callback action for event-name-2 here
             signInWithIccCompletion?(true)
+        case "signInWithIccAlso":
+            Logger.print("Received 'sign-in-with-icc-also' event")
+            // Call your callback action for event-name-2 here
+            signInWithIccCompletion?(true)
         case "signOut":
             Logger.print("Received 'fan-passport-sign-out' event")
             // Call your callback action for event-name-2 here
             signOutToIccCompletion?(true)
         case "goToPrediction":
-            Logger.print("Received 'fan-passport-sign-out' event")
+            Logger.print("Received 'go-to-prediction' event")
             // Call your callback action for event-name-2 here
             openDeepLink(urlString: deeplinkURLPrediction)
         default:
@@ -318,27 +328,34 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
         } else if let authToken {
             encryptAuthToken(authToken: authToken) { encryptedToken in
                 DispatchQueue.main.async {
-                    var urlString: String
-                    urlString = "\(self.baseUrlString)\(entryPoint)?passport_access=\(encryptedToken)"
-                    self.loadURL(urlString)
+                    
+                    var urlStringload = "\(self.baseUrlString)\(entryPoint)?passport_access=\(encryptedToken)"
+                            if self.isFirstLoad {
+                                urlStringload += "&icc_client=mobile_app"
+                            }
+                            if let url = URL(string: urlStringload) {
+                                let request = URLRequest(url: url)
+                                self.loadURL(urlStringload)
+                            }
+
                 }
             }
-        }  else if let authToken = authToken, !authToken.isEmpty {
+        } else {
+            clearLocalStorage{
+                self.loadURL(self.baseUrlString)
+
+            }
             
-                DispatchQueue.main.async {
-                    //let urlString = "\(self.baseUrlString)\(entryPoint)?passport_access=\(encryptedToken)"
-                    self.loadURL(self.baseUrlString)
-                }
-        }else {
-//            let script = WKUserScript(
-//                source: "window.localStorage.clear();", // call another JS function that "logsout" user
-//                injectionTime: .atDocumentStart,
-//                forMainFrameOnly: true
-//            )
-//            webView.configuration.userContentController.addUserScript(script)
-            loadURL(baseUrlString)
         }
     }
+    
+    private func clearLocalStorage(completion: @escaping () -> Void) {
+            let dataStore = webView.configuration.websiteDataStore
+            let dataTypes = Set([WKWebsiteDataTypeCookies, WKWebsiteDataTypeLocalStorage, WKWebsiteDataTypeSessionStorage, WKWebsiteDataTypeIndexedDBDatabases, WKWebsiteDataTypeWebSQLDatabases])
+            dataStore.fetchDataRecords(ofTypes: dataTypes) { records in
+                dataStore.removeData(ofTypes: dataTypes, for: records, completionHandler: completion)
+            }
+        }
     
     func loadURL(_ urlString: String) {
       if let url = URL(string: urlString) {
@@ -410,9 +427,6 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
             decisionHandler(.cancel)
             return
         }
-        
-       
-        
         // Handle URLs containing "sign-transaction"
         if url.absoluteString.contains("sign-transaction") {
           
@@ -541,10 +555,12 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
                     startSDKOperations(entryPoint: .onboarding, accountid: accountId, publickey: publicKey)
                 }
             }
-        }else {
-            print(url)
+        }else if url.host?.contains("claim") == true {
             let claimteir = "\(self.baseUrlString)\(PassportEntryPoint.onboarding)/claim-tier"
             self.loadURL(claimteir)
+            
+        }else {
+            Logger.print("No other url")
         }
         
         // Dismiss any presented view controllers, such as a Safari view controller
