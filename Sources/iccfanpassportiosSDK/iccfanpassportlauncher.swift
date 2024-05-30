@@ -567,8 +567,6 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
             Logger.print("No other url")
         }
         
-        // Dismiss any presented view controllers, such as a Safari view controller
-        self.presentedViewController?.dismiss(animated: true)
     }
     func presentAndHandleCallbacks(animated: Bool = true, completion: (() -> Void)? = nil) {
         self.present(self, animated: animated, completion: completion)  // Present the ICCWebView
