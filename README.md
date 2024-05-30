@@ -1,5 +1,5 @@
 # iccfanpassportiosSDK Documentation
-## iccfanpassportiosSDK v1.0.10
+## iccfanpassportiosSDK v1.0.12
 
 ### Overview
 
