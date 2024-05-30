@@ -1,5 +1,5 @@
 # iccfanpassportiosSDK Documentation
-## iccfanpassportiosSDK v1.0.9
+## iccfanpassportiosSDK v1.0.10
 
 ### Overview
 
@@ -85,6 +85,18 @@ class YourViewController: UIViewController {
     }
 }
 ```
+## logout Flow
+
+To log out the user in Fanpassport from ICC App:
+            Set iccfanSDK.userData = nil
+            
+            let initialEntryPoint: PassportEntryPoint = .profile
+            let environment: Environment = .development // or .production
+        
+            let iccWebView = ICCWebView(initialEntryPoint: initialEntryPoint, environment: environment)
+
+So add this to your appdelegate:
+           
 
 ## Handling Deep Links
 

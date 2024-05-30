@@ -216,7 +216,11 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
     }
 
     func setupActivityIndicator() {
-        activityIndicator = UIActivityIndicatorView(style: .large)
+        if #available(iOS 13.0, *) {
+            activityIndicator = UIActivityIndicatorView(style: .large)
+        } else {
+            // Fallback on earlier versions
+        }
         activityIndicator.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(activityIndicator)
         
