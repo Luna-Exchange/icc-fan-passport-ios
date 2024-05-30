@@ -81,6 +81,7 @@ class YourViewController: UIViewController {
     }
 }
 ```
+## logout Flow
 ## Logout Flow
 
 To log out the user in Fanpassport from ICC App:
