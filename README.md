@@ -72,10 +72,6 @@ class YourViewController: UIViewController {
             
         }
         
-        iccWebView.signInWithIccCompletion = { success in
-            // Handle the sign-in completion
-        }
-        
         
         present(iccWebView, animated: true, completion: nil)
     }
@@ -85,7 +81,7 @@ class YourViewController: UIViewController {
     }
 }
 ```
-## logout Flow
+## Logout Flow
 
 To log out the user in Fanpassport from ICC App:
             Set 
@@ -95,8 +91,6 @@ To log out the user in Fanpassport from ICC App:
             let environment: Environment = .development // or .production
         
             let iccWebView = ICCWebView(initialEntryPoint: initialEntryPoint, environment: environment)
-
-So add this to your appdelegate:
            
 
 ## Handling Deep Links
@@ -107,25 +101,16 @@ So add this to your appdelegate:
             iccfanSDK.handle(url: URL)
             
             ##Example
-                func application(_ app: UIApplication, open url: URL,options: [UIApplication.OpenURLOptionsKey : Any] = [:]
+            func application(_ app: UIApplication, open url: URL,options: [UIApplication.OpenURLOptionsKey : Any] = [:]
                 ) -> Bool {
             
                     return iccfanSDK.handle(url: url)
-                }
-
-
-## Customizing Web Content
-
-To start operations with a specific entry point, use the `startSDKOperations` method. The URL is constructed based on the provided entry point and authentication token.
-
-```swift
-iccWebView.startSDKOperations(entryPoint: .profile)
-```
+                
 
 
 
 ### Notes
 
-- Ensure to configure `navigateToICCAction`,`signInWithIccCompletion` and `SignOutToIccCompletion` to handle navigation within your app.
+- Ensure to configure `navigateToICCAction` and `signInWithIccCompletion` to handle navigation within your app.
 
 This documentation provides a concise guide to integrating and using the `ICCWebView` SDK within your iOS app. For any advanced customizations or additional features, refer to the source code and extend the functionality as needed.
