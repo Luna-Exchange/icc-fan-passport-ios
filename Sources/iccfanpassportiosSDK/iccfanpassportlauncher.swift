@@ -54,14 +54,14 @@ extension URL {
     }
 }
 
-public enum PassportEntryPoint: String {
+public enum PassportEntryPoint: String, CustomStringConvertible {
     case defaultPath = ""
     case createAvatar = "/create-avatar"
     case onboarding = "/onboarding"
     case profile = "/profile"
     case challenges = "/challenges"
     case rewards = "/rewards"
-
+    public var description: String { rawValue }
     var path: String {
         return self.rawValue
     }
@@ -355,10 +355,15 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
                 injectionTime: .atDocumentStart,
                 forMainFrameOnly: true
             )
-            webView.configuration.userContentController.addUserScript(script)
-            self.loadURL(self.baseUrlString)
-
-            
+            if self.isFirstLoad {
+                webView.configuration.userContentController.addUserScript(script)
+                var components = URLComponents(string: self.baseUrlString)
+                components?.queryItems = [.init(name: "icc_client", value: "mobileapp")]
+                if let string = components?.url?.absoluteString {
+                    self.loadURL(string)
+                }
+            }
+            self.loadURL(baseUrlString)
         }
     }
     
@@ -440,14 +445,19 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
             decisionHandler(.cancel)
             return
         }
+        
+        if let fanURL = URL(string: iccBaseURL + "fan-passport"),
+           fanURL == url {
+            decisionHandler(.cancel)
+            return
+        }
+        
         // Handle URLs containing "sign-transaction"
         if url.absoluteString.contains("sign-transaction") {
           
             let urlformintingRC = removeCallbackUrl(from: url.absoluteString) ?? "" // Empty string if nil
             let urlformintingString = "\(urlformintingRC)&callback_url=\(callbackURL)"
-//            let urlformintingRC = removeCallbackUrl(from: url.absoluteString)
-//            let urlformintingString = "\(urlformintingRC)\(callbackURL)"
-                
+
             guard let mintURL = URL(string: urlformintingString) else {
                 decisionHandler(.cancel)
                 return
