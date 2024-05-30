@@ -24,6 +24,10 @@ public class iccfanSDK {
             sharedFanView?.update(userData: userData)
         }
     }
+    
+    public static func logout(completion: @escaping () -> Void) {
+            sharedFanView?.clearLocalStorage(completion: completion)
+        }
 }
 
 public struct UserData {
@@ -345,10 +349,15 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
                 }
             }
         } else {
-            clearLocalStorage{
-                self.loadURL(self.baseUrlString)
+            
+            let script = WKUserScript(
+                source: "window.localStorage.clear();", // call another JS function that "logsout" user
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: true
+            )
+            webView.configuration.userContentController.addUserScript(script)
+            self.loadURL(self.baseUrlString)
 
-            }
             
         }
     }
@@ -541,9 +550,6 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
                         }
                     }
                 }
-//                if let extractedPublicKey = publicKey {
-//                      publicKey = encodePublicKey(extractedPublicKey)  // Encode the colon back
-//                  }
                 
                 // Debugging output
                 Logger.print("Account ID: \(accountId ?? "N/A")")
