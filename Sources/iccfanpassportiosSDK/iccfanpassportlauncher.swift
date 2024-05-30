@@ -2,15 +2,14 @@ import Foundation
 import WebKit
 import SafariServices
 
+// swiftlint:disable all
 public class iccfanSDK {
     public static var enableLogging: Bool = false
     static weak var sharedFanView: ICCWebView?
     static var userData: UserData?
-    private static var isLoggedIn: Bool = true
-    
     public static func handle(url: URL) -> Bool {
         // Ensure the shared webview is not nil
-        guard let fanView = sharedFanView else {
+        guard let  fanView = sharedFanView else {
             return false
         }
         
@@ -23,12 +22,13 @@ public class iccfanSDK {
         self.userData = userData
         DispatchQueue.main.async {
             sharedFanView?.update(userData: userData)
-            isLoggedIn = userData != nil
         }
     }
-
+    
+    public static func logout(completion: @escaping () -> Void) {
+            sharedFanView?.clearLocalStorage(completion: completion)
+        }
 }
-
 
 public struct UserData {
     public var token: String
@@ -152,10 +152,10 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
         
         
         
-        iccfanSDK.sharedFanView = self 
-        
+        iccfanSDK.sharedFanView = self // Retain the reference to the shared instance
+       
         startSDKOperations(entryPoint: initialEntryPoint)
- 
+        
     }
     public override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
@@ -305,13 +305,10 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
             Logger.print("Received 'sign-in-with-icc-also' event")
             // Call your callback action for event-name-2 here
             signInWithIccCompletion?(true)
-        case "signOutfromICC":
-            Logger.print("Received 'sign-out-from-icc' event")
+        case "signOut":
+            Logger.print("Received 'fan-passport-sign-out' event")
             // Call your callback action for event-name-2 here
-            //logoutUser()
-            clearLocalStorage {
-                print("Data Clear")
-            }
+            signOutToIccCompletion?(true)
         case "goToPrediction":
             Logger.print("Received 'go-to-prediction' event")
             // Call your callback action for event-name-2 here
@@ -329,79 +326,49 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
       UIApplication.shared.open(url)
     }
     
-    public func signOut() {
-        //logoutUser()
-        clearLocalStorage {
-            Logger.print("Local storage cleared.")
-        }
-      }
-    
-//    func clearWebViewLocalStorage() {
-//            let dataStore = webView.configuration.websiteDataStore
-//            let dataTypes = Set([WKWebsiteDataTypeCookies, WKWebsiteDataTypeLocalStorage, WKWebsiteDataTypeSessionStorage, WKWebsiteDataTypeIndexedDBDatabases, WKWebsiteDataTypeWebSQLDatabases])
-//            dataStore.fetchDataRecords(ofTypes: dataTypes) { records in
-//                dataStore.removeData(ofTypes: dataTypes, for: records, completionHandler: completion)
-//            }
-//        }
-    
     func startSDKOperations(entryPoint: PassportEntryPoint, accountid: String? = nil, publickey: String? = nil) {
         
         if let accountId = accountid, let publicKey = publickey, !accountId.isEmpty {
-//            let userDefaults = UserDefaults.standard
-//            if let tokenmintString = userDefaults.string(forKey: "tokenmint") {
+            DispatchQueue.main.async {
                 let urlString2 = "\(self.baseUrlString)\(entryPoint)/connect-wallet?account_id=\(accountId)&public_key=\(publicKey)"
                 self.loadURL(urlString2)
-                Logger.print(urlString2)
-//
-//            } else {
-//                // Handle the case where "tokenmint" is not found in UserDefaults
-//                Logger.print("Missing tokenmint! Cannot construct URL.")
-//            }
+            }
         } else if let authToken {
             encryptAuthToken(authToken: authToken) { encryptedToken in
                 DispatchQueue.main.async {
-                    var urlString: String
-                    urlString = "\(self.baseUrlString)\(entryPoint)?passport_access=\(encryptedToken)"
-                    self.loadURL(urlString)
+                    
+                    var urlStringload = "\(self.baseUrlString)\(entryPoint)?passport_access=\(encryptedToken)"
+                            if self.isFirstLoad {
+                                urlStringload += "&icc_client=mobile_app"
+                            }
+                            if let url = URL(string: urlStringload) {
+                                let request = URLRequest(url: url)
+                                self.loadURL(urlStringload)
+                            }
+
                 }
             }
         } else {
+            
             let script = WKUserScript(
                 source: "window.localStorage.clear();", // call another JS function that "logsout" user
                 injectionTime: .atDocumentStart,
                 forMainFrameOnly: true
             )
             webView.configuration.userContentController.addUserScript(script)
-            loadURL(baseUrlString)
+            self.loadURL(self.baseUrlString)
+
+            
         }
     }
-    func evaluateJavaScript(_ javaScriptString: String, completionHandler: ((Any?, Error?) -> Void)? = nil) {
-            webView.evaluateJavaScript(javaScriptString, completionHandler: completionHandler)
-        }
-
     
-//    func clearLocalStorage(completion: @escaping () -> Void) {
-//        let jsClearStorage = """
-//          localStorage.clear();
-//          sessionStorage.clear();
-//        """
-//        self.evaluateJavaScript(jsClearStorage) { _, error in
-//          if let error = error {
-//            print("Error clearing local storage: \(error.localizedDescription)")
-//          }
-//          completion()
-//        }
-//      }
-//    
-   func clearLocalStorage(completion: @escaping () -> Void) {
+    public func clearLocalStorage(completion: @escaping () -> Void) {
             let dataStore = webView.configuration.websiteDataStore
             let dataTypes = Set([WKWebsiteDataTypeCookies, WKWebsiteDataTypeLocalStorage, WKWebsiteDataTypeSessionStorage, WKWebsiteDataTypeIndexedDBDatabases, WKWebsiteDataTypeWebSQLDatabases])
             dataStore.fetchDataRecords(ofTypes: dataTypes) { records in
                 dataStore.removeData(ofTypes: dataTypes, for: records, completionHandler: completion)
             }
         }
-    
-   
     
     func loadURL(_ urlString: String) {
       if let url = URL(string: urlString) {
@@ -466,9 +433,6 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
         task.resume()
     }
     
-    
-  
-    
     public func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         
         // Ensure the URL is valid
@@ -525,6 +489,13 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
         return urlComponents.url?.absoluteString
     }
     
+    private func signOut() {
+        // Perform any necessary sign-out operations here
+        Logger.print("User signed out")
+
+        // Dismiss the ICCWebView
+        self.dismiss(animated: true, completion: nil)
+    }
     
     func openSafariViewController(with url: URL) {
         // Dismiss any presented view controllers, such as the Safari view controller
@@ -579,9 +550,6 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
                         }
                     }
                 }
-//                if let extractedPublicKey = publicKey {
-//                      publicKey = encodePublicKey(extractedPublicKey)  // Encode the colon back
-//                  }
                 
                 // Debugging output
                 Logger.print("Account ID: \(accountId ?? "N/A")")
@@ -605,6 +573,8 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
             Logger.print("No other url")
         }
         
+        // Dismiss any presented view controllers, such as a Safari view controller
+        self.presentedViewController?.dismiss(animated: true)
     }
     func presentAndHandleCallbacks(animated: Bool = true, completion: (() -> Void)? = nil) {
         self.present(self, animated: animated, completion: completion)  // Present the ICCWebView
