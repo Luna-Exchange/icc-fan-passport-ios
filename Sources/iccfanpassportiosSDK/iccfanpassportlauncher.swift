@@ -127,10 +127,10 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
             self.iccBaseURL = "https://react-fe-en.icc-dev.deltatre.digital/"
         case .production:
             self.baseUrlString = "https://fanpassport.icc-cricket.com/"
-            self.UrlStringMint = "https://wallet.mintbase.xyz/connect?theme=icc?success_url=icc://mintbase.xyz"
+            self.UrlStringMint = "https://wallet.mintbase.xyz/connect?theme=icc&success_url=icc://mintbase.xyz"
             self.callbackURL = "icc://mintbase.xyz"
             self.UrlStringMinting = "https://wallet.mintbase.xyz/sign-transaction?theme=icc"
-            self.UrlStringEncode = "https://passport-api.icc-cricket.com/"
+            self.UrlStringEncode = "https://passport-api.icc-cricket.com/auth/encode"
             self.deepLinkURLFantasy = "icc://www.icc-cricket.com/fantasy-game"
             self.deeplinkURLPrediction = "icc://www.icc-cricket.com/tournaments/t20cricketworldcup/matches"
             self.iccBaseURL = "https://www.icc-cricket.com/"
