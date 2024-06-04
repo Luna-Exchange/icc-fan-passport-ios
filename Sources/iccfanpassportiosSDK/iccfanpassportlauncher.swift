@@ -186,6 +186,7 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
         userContentController.add(handler, name: "navigateToIcc")
         userContentController.add(handler, name: "goToFantasy")
         userContentController.add(handler, name: "signInWithIcc")
+        userContentController.add(handler, name: "goToPrediction")
         userContentController.add(handler, name: "signOut")
         
         // Set up Auto Layout constraints to make the webView full screen
@@ -362,8 +363,9 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
                 if let string = components?.url?.absoluteString {
                     self.loadURL(string)
                 }
+            }else{
+                self.loadURL(baseUrlString)
             }
-            self.loadURL(baseUrlString)
         }
     }
     
@@ -544,47 +546,56 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
 
     func handleDeepLink(_ url: URL) {
         // Check if the URL contains "mintbase.xyz"
-        if url.host?.contains("mintbase.xyz") == true {
-            // Use URLComponents to parse the URL and extract the query parameters
-            if let urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false) {
-                var accountId: String?
-                var publicKey: String?
-                
-                // Loop through the query items to find account_id and public_key
-                if let queryItems = urlComponents.queryItems {
-                    for queryItem in queryItems {
-                        if queryItem.name == "account_id" {
-                            accountId = queryItem.value
-                        } else if queryItem.name == "public_key" {
-                            publicKey = queryItem.value
+        if url.host == "mintbase.xyz" {
+            if url.absoluteString.contains("account_id") {
+                // Use URLComponents to parse the URL and extract the query parameters
+                if let urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+                    var accountId: String?
+                    var publicKey: String?
+                    
+                    // Loop through the query items to find account_id and public_key
+                    if let queryItems = urlComponents.queryItems {
+                        for queryItem in queryItems {
+                            if queryItem.name == "account_id" {
+                                accountId = queryItem.value
+                            } else if queryItem.name == "public_key" {
+                                publicKey = queryItem.value
+                            }
                         }
+                    }
+                    
+                    // Debugging output
+                    Logger.print("Account ID: \(accountId ?? "N/A")")
+                    Logger.print("Public Key: \(publicKey ?? "N/A")")
+                    
+                    // Inject JavaScript to handle the deeplink within the webview
+                    let jsCommand = "handleDeepLink('\(url.absoluteString)')"
+                    Logger.print(url.absoluteString)
+                    webView.evaluateJavaScript(jsCommand, completionHandler: nil)
+                    
+                    // Restart SDK operations with the extracted account_id and public_key
+                    if let accountId = accountId, let publicKey = publicKey {
+                        startSDKOperations(entryPoint: .onboarding, accountid: accountId, publickey: publicKey)
                     }
                 }
                 
-                // Debugging output
-                Logger.print("Account ID: \(accountId ?? "N/A")")
-                Logger.print("Public Key: \(publicKey ?? "N/A")")
+            } else if url.absoluteString.contains("transactionHashes") {
+                var claimTierURL = URLComponents(string: baseUrlString)!
+                claimTierURL.path += "onboarding/claim-tier"
                 
-                // Inject JavaScript to handle the deeplink within the webview
-                let jsCommand = "handleDeepLink('\(url.absoluteString)')"
-                Logger.print(url.absoluteString)
-                webView.evaluateJavaScript(jsCommand, completionHandler: nil)
+                // Access the final URL
+                let claimteir = claimTierURL.url!
+                //claimteir = "\(self.baseUrlString)onboarding/claim-tier"
+                self.loadURL(claimteir.absoluteString)
                 
-                // Restart SDK operations with the extracted account_id and public_key
-                if let accountId = accountId, let publicKey = publicKey {
-                    startSDKOperations(entryPoint: .onboarding, accountid: accountId, publickey: publicKey)
-                }
             }
-        }else if url.host?.contains("claim") == true {
-            let claimteir = "\(self.baseUrlString)\(PassportEntryPoint.onboarding)/claim-tier"
-            self.loadURL(claimteir)
+            else {
+                Logger.print("No other url")
+            }
             
-        }else {
-            Logger.print("No other url")
+            // Dismiss any presented view controllers, such as a Safari view controller
+            self.presentedViewController?.dismiss(animated: true)
         }
-        
-        // Dismiss any presented view controllers, such as a Safari view controller
-        self.presentedViewController?.dismiss(animated: true)
     }
     func presentAndHandleCallbacks(animated: Bool = true, completion: (() -> Void)? = nil) {
         self.present(self, animated: animated, completion: completion)  // Present the ICCWebView
