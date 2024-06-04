@@ -54,6 +54,19 @@ extension URL {
     }
 }
 
+public struct URLS {
+    public let fantasy: String
+    public let predictor: String
+    public let iccBaseURL: String
+    public init(fantasy: String,
+                predictor: String,
+                iccBaseURL: String) {
+        self.fantasy = fantasy
+        self.predictor = predictor
+        self.iccBaseURL = iccBaseURL
+    }
+}
+
 public enum PassportEntryPoint: String, CustomStringConvertible {
     case defaultPath = ""
     case createAvatar = "/create-avatar"
@@ -92,9 +105,9 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
     private var UrlStringMinting: String
     private var UrlStringEncode: String
     private var callbackURL: String
-    private var deepLinkURLFantasy: String
-    private var deeplinkURLPrediction: String
-    private var iccBaseURL: String
+    private var deepLinkURLFantasy: String { urls.fantasy }
+    private var deeplinkURLPrediction: String { urls.predictor }
+    private var iccBaseURL: String { urls.iccBaseURL }
     private var activityIndicator: UIActivityIndicatorView!
     private var backgroundImageView: UIImageView!
     
@@ -102,6 +115,7 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
     public var name: String? { iccfanSDK.userData?.name }
     public var email: String? { iccfanSDK.userData?.email }
     public var initialEntryPoint: PassportEntryPoint
+    private let urls: URLS
    
     public typealias NavigateToICCAction = (UIViewController) -> Void  // Define callback type for navigation
     public var navigateToICCAction: NavigateToICCAction?  // Property to store navigation callback
@@ -113,8 +127,10 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
     public var signOutToIccCompletion: SignInWithIccCompletion?
 
 
-    public init(initialEntryPoint: PassportEntryPoint, environment: Environment) {
+    public init(initialEntryPoint: PassportEntryPoint, environment: Environment,
+urls: URLS) {
         self.initialEntryPoint = initialEntryPoint
+        self.urls = urls
         switch environment {
         case .development:
             self.baseUrlString = "https://icc-fan-passport-staging.vercel.app/"
@@ -122,18 +138,18 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
             self.UrlStringMinting = "https://testnet.wallet.mintbase.xyz/sign-transaction?theme=icc"
             self.callbackURL = "iccdev://mintbase.xyz"
             self.UrlStringEncode = "https://icc-fan-passport-stg-api.insomnialabs.xyz/auth/encode"
-            self.deepLinkURLFantasy = "iccdev://react-fe-en.icc-dev.deltatre.digital/fantasy-game"
-            self.deeplinkURLPrediction = "iccdev://react-fe-en.icc-dev.deltatre.digital/tournaments/t20cricketworldcup/matches"
-            self.iccBaseURL = "https://react-fe-en.icc-dev.deltatre.digital/"
+            //self.deepLinkURLFantasy = "iccdev://react-fe-en.icc-dev.deltatre.digital/fantasy-game"
+            //self.deeplinkURLPrediction = "iccdev://react-fe-en.icc-dev.deltatre.digital/tournaments/t20cricketworldcup/matches"
+            //self.iccBaseURL = "https://react-fe-en.icc-dev.deltatre.digital/"
         case .production:
             self.baseUrlString = "https://fanpassport.icc-cricket.com/"
             self.UrlStringMint = "https://wallet.mintbase.xyz/connect?theme=icc&success_url=icc://mintbase.xyz"
             self.callbackURL = "icc://mintbase.xyz"
             self.UrlStringMinting = "https://wallet.mintbase.xyz/sign-transaction?theme=icc"
             self.UrlStringEncode = "https://passport-api.icc-cricket.com/auth/encode"
-            self.deepLinkURLFantasy = "icc://www.icc-cricket.com/fantasy-game"
-            self.deeplinkURLPrediction = "icc://www.icc-cricket.com/tournaments/t20cricketworldcup/matches"
-            self.iccBaseURL = "https://www.icc-cricket.com/"
+            //self.deepLinkURLFantasy = "icc://www.icc-cricket.com/fantasy-game"
+            //self.deeplinkURLPrediction = "icc://www.icc-cricket.com/tournaments/t20cricketworldcup/matches"
+            //self.iccBaseURL = "https://www.icc-cricket.com/"
             
         }
         super.init(nibName: nil, bundle: nil)
@@ -583,9 +599,8 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
                 var claimTierURL = URLComponents(string: baseUrlString)!
                 claimTierURL.path += "onboarding/claim-tier"
                 
-                // Access the final URL
+                
                 let claimteir = claimTierURL.url!
-                //claimteir = "\(self.baseUrlString)onboarding/claim-tier"
                 self.loadURL(claimteir.absoluteString)
                 
             }
