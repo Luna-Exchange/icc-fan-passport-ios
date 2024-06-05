@@ -280,9 +280,6 @@ urls: URLS) {
             window.addEventListener('fan-passport-sign-out', function() {
                   window.webkit.messageHandlers.signOut.postMessage(null);
                 });
-            window.addEventListener('go-to-prediction', function() {
-                  window.webkit.messageHandlers.goToPrediction.postMessage(null);
-                });
         """
 
         webView.evaluateJavaScript(script, completionHandler: nil)
