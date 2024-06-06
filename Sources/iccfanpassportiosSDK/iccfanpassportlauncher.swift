@@ -110,7 +110,7 @@ public class ICCWebView: UIViewController, WKNavigationDelegate, WKScriptMessage
     private var iccBaseURL: String { urls.iccBaseURL }
     private var activityIndicator: UIActivityIndicatorView!
     private var backgroundImageView: UIImageView!
-    
+    private var feedbackformurl: String
     public var authToken: String? { iccfanSDK.userData?.token }
     public var name: String? { iccfanSDK.userData?.name }
     public var email: String? { iccfanSDK.userData?.email }
@@ -138,18 +138,14 @@ urls: URLS) {
             self.UrlStringMinting = "https://testnet.wallet.mintbase.xyz/sign-transaction?theme=icc"
             self.callbackURL = "iccdev://mintbase.xyz"
             self.UrlStringEncode = "https://icc-fan-passport-stg-api.insomnialabs.xyz/auth/encode"
-            //self.deepLinkURLFantasy = "iccdev://react-fe-en.icc-dev.deltatre.digital/fantasy-game"
-            //self.deeplinkURLPrediction = "iccdev://react-fe-en.icc-dev.deltatre.digital/tournaments/t20cricketworldcup/matches"
-            //self.iccBaseURL = "https://react-fe-en.icc-dev.deltatre.digital/"
+            self.feedbackformurl = "https://forms.clickup.com/9017112878/f/8cqce9e-4997/UI9BXLHMZM7OOXZXX5"
         case .production:
             self.baseUrlString = "https://fanpassport.icc-cricket.com/"
             self.UrlStringMint = "https://wallet.mintbase.xyz/connect?theme=icc&success_url=icc://mintbase.xyz"
             self.callbackURL = "icc://mintbase.xyz"
             self.UrlStringMinting = "https://wallet.mintbase.xyz/sign-transaction?theme=icc"
             self.UrlStringEncode = "https://passport-api.icc-cricket.com/auth/encode"
-            //self.deepLinkURLFantasy = "icc://www.icc-cricket.com/fantasy-game"
-            //self.deeplinkURLPrediction = "icc://www.icc-cricket.com/tournaments/t20cricketworldcup/matches"
-            //self.iccBaseURL = "https://www.icc-cricket.com/"
+            self.feedbackformurl = "https://forms.clickup.com/9017112878/f/8cqce9e-4997/UI9BXLHMZM7OOXZXX5"
             
         }
         super.init(nibName: nil, bundle: nil)
@@ -483,6 +479,15 @@ urls: URLS) {
             decisionHandler(.cancel)
         
         // Handle URLs that should be opened in Safari
+        } else if url.absoluteString.contains("forms.clickup.com") {
+            guard let feedbackFormURL = URL(string: feedbackformurl) else {
+                decisionHandler(.cancel)
+                return
+            }
+            openSafariViewController(with: feedbackFormURL)
+            decisionHandler(.cancel)
+            
+            // Cancel navigation to the iccBaseURL
         } else if shouldOpenURLInSafari(url) {
             guard let walletCreationURL = URL(string: UrlStringMint) else {
                 decisionHandler(.cancel)
